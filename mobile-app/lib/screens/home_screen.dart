@@ -8,6 +8,7 @@ import '../widgets/risk_indicator.dart';
 import '../widgets/eeg_chart_widget.dart';
 import '../widgets/device_list.dart';
 import '../utils/config.dart';
+import '../models/eeg_data.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
