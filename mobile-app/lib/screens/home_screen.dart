@@ -1,158 +1,174 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/eeg_service.dart';
-import '../services/processing_service.dart';
-import '../services/backend_service.dart';
-import '../widgets/connection_status.dart';
-import '../widgets/risk_indicator.dart';
-import '../widgets/eeg_chart_widget.dart';
-import '../widgets/device_list.dart';
-import '../utils/config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key}) : super(key: key); // убираем token из конструктора
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String caregiverName = "";
+  int healthState = 0;
+  Timer? timer;
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  String? token;
+
   @override
   void initState() {
     super.initState();
-    _setupDataPipeline();
+    _initNotifications();
+    _loadUser();
+    // не запускаем healthCheck здесь, тк token пока null
   }
 
-  void _setupDataPipeline() {
-    final eegService = context.read<EEGService>();
-    final processingService = context.read<ProcessingService>();
-    final backendService = context.read<BackendService>();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Получаем token из аргументов после построения контекста
+    final args = ModalRoute.of(context)!.settings.arguments as Map?;
+    token = args != null ? args['token'] : null;
 
-    // Pipeline: EEG -> Processing -> Backend
-    eegService.dataStream.listen((sample) {
-      processingService.processSample(sample);
+    if (token != null) {
+      _startHealthCheck();
+    }
+  }
+
+  Future<void> _initNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (details) {
+        Navigator.pushNamed(context, '/alert1'); // Первый алерт экран
+      },
+    );
+  }
+
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      caregiverName = prefs.getString('caregiverName') ?? 'Опекаемый';
     });
+  }
 
-    processingService.featuresStream.listen((features) {
-      // Send to backend
-      backendService.sendFeatures(
-        FeaturePayload(
-          patientId: Config.patientId,
-          windowStart: DateTime.now(),
-          features: features,
-        ),
-      );
+  void _startHealthCheck() {
+    timer = Timer.periodic(Duration(seconds: 5), (_) async {
+      if (token == null) return;
+
+      try {
+        final response = await http.get(Uri.parse(
+            'http://localhost:8000/health?token=$token')); // адаптировать под твой сервер
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          int newHealth = data['health'] ?? 0;
+
+          setState(() => healthState = newHealth);
+
+          if (newHealth >= 98) {
+            _showCriticalNotification();
+          }
+        }
+      } catch (e) {
+        print("Ошибка обновления здоровья: $e");
+      }
     });
+  }
 
-    // Connect to WebSocket for real-time updates
-    backendService.connectWebSocket();
+  Future<void> _showCriticalNotification() async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'critical_health_channel',
+      'Critical Health Alerts',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      // sound: RawResourceAndroidNotificationSound('alert'), // если есть свой mp3
+    );
+
+    const NotificationDetails platformDetails =
+        NotificationDetails(android: androidDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Критическое состояние!',
+      'Состояние здоровья $caregiverName = $healthState',
+      platformDetails,
+    );
+  }
+
+  void _makeCall() async {
+    final Uri launchUri = Uri(scheme: 'tel', path: '123456789');
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    }
+  }
+
+  void _exit() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EEG Monitor'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: Navigate to settings
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Connection status banner
-          const ConnectionStatus(),
-
-          // Risk indicator
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Consumer<BackendService>(
-              builder: (context, backendService, child) {
-                return RiskIndicator(
-                  patientState: backendService.latestState,
-                );
-              },
-            ),
-          ),
-
-          // EEG Chart
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Consumer<EEGService>(
-                builder: (context, eegService, child) {
-                  return EEGChartWidget(
-                    dataStream: eegService.dataStream,
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // Control buttons
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _buildControlButtons(),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showDeviceList,
-        tooltip: 'Connect Device',
-        child: const Icon(Icons.bluetooth),
-      ),
-    );
-  }
-
-  Widget _buildControlButtons() {
-    return Consumer<EEGService>(
-      builder: (context, eegService, child) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      backgroundColor: Color.fromARGB(255, 171, 194, 242),
+      appBar: AppBar(title: Text(caregiverName)),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
-            ElevatedButton.icon(
-              onPressed: eegService.isConnected
-                  ? () => eegService.disconnect()
-                  : () => eegService.startSimulation(),
-              icon: Icon(eegService.isConnected ? Icons.stop : Icons.play_arrow),
-              label: Text(eegService.isConnected ? 'Stop' : 'Start Demo'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: eegService.isConnected ? Colors.red : Colors.green,
-                foregroundColor: Colors.white,
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Состояние здоровья',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    '$healthState',
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () => _refreshPatientState(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+            SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _makeCall,
+              child: Text("Make a Call"),
+            ),
+            SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _exit,
+              child: Text("Exit"),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
-  }
-
-  void _showDeviceList() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => const DeviceList(),
-    );
-  }
-
-  Future<void> _refreshPatientState() async {
-    final backendService = context.read<BackendService>();
-    await backendService.getPatientState(Config.patientId);
-  }
-
-  @override
-  void dispose() {
-    final backendService = context.read<BackendService>();
-    backendService.disconnectWebSocket();
-    super.dispose();
   }
 }
