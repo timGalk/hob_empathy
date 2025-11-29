@@ -49,6 +49,34 @@ CREATE TABLE IF NOT EXISTS alerts (
 
 CREATE INDEX IF NOT EXISTS idx_patient_alerts ON alerts (patient_id, ts DESC);
 
+-- Users table for authentication
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    role VARCHAR(50) DEFAULT 'clinician',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_username ON users (username);
+CREATE INDEX IF NOT EXISTS idx_email ON users (email);
+
+-- User-Patient assignments (for clinicians to access specific patients)
+CREATE TABLE IF NOT EXISTS user_patient_assignments (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    patient_id VARCHAR(100) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, patient_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_assignments ON user_patient_assignments (user_id);
+CREATE INDEX IF NOT EXISTS idx_patient_assignments ON user_patient_assignments (patient_id);
+
 -- Insert demo patient
 INSERT INTO patients (patient_id, name, age, notes)
 VALUES ('patient_001', 'Demo Patient', 75, 'Test patient for MVP demo')

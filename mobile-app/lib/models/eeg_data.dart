@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// EEG data sample model
 class EEGSample {
   final DateTime timestamp;
