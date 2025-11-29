@@ -1,31 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'screens/splash_screen.dart';
-import 'screens/registration_screen.dart';
-import 'screens/login_screen.dart';
+import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
-import 'screens/alert_screen_1.dart';
-import 'screens/alert_screen_2.dart';
+import 'services/eeg_service.dart';
+import 'services/processing_service.dart';
+import 'services/backend_service.dart';
 
 void main() {
-  runApp(EmpathyApp());
+  runApp(const EEGMonitorApp());
 }
 
-class EmpathyApp extends StatelessWidget {
+class EEGMonitorApp extends StatelessWidget {
+  const EEGMonitorApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'EmpathyApp',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => SplashScreen(),
-        '/registration': (context) => RegistrationScreen(),
-        '/login': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(),
-        '/alert1': (context) => AlertScreen1(),
-        '/alert2': (context) => AlertScreen2(),
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => EEGService()),
+        ChangeNotifierProvider(create: (_) => ProcessingService()),
+        ChangeNotifierProvider(create: (_) => BackendService()),
+      ],
+      child: MaterialApp(
+        title: 'EEG Monitor',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+        ),
+        home: const HomeScreen(),
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }
