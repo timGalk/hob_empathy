@@ -1,0 +1,51 @@
+name: eeg_monitor
+description: EEG Dementia Monitoring - Mobile Edge Processor
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  provider: ^6.1.1
+
+  # Networking
+  http: ^1.1.0
+  web_socket_channel: ^2.4.0
+
+  # BLE connectivity for EEG devices
+  flutter_blue_plus: ^1.31.0
+
+  # Signal processing
+  fftea: ^1.0.0
+
+  # Storage
+  shared_preferences: ^2.2.2
+
+  # Permissions
+  permission_handler: ^11.1.0
+
+  # UI
+  cupertino_icons: ^1.0.6
+  fl_chart: ^0.65.0
+
+  # Utils
+  intl: ^0.18.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Add custom fonts if needed
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: fonts/Roboto-Regular.ttf
