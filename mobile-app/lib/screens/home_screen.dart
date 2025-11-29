@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/eeg_service.dart';
 import '../services/processing_service.dart';
 import '../services/backend_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/connection_status.dart';
 import '../widgets/risk_indicator.dart';
 import '../widgets/eeg_chart_widget.dart';
@@ -53,14 +54,41 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EEG Monitor'),
+        title: Consumer<AuthService>(
+          builder: (context, authService, child) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('EEG Monitor'),
+                if (authService.currentUser != null)
+                  Text(
+                    authService.currentUser!.username,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+              ],
+            );
+          },
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: Navigate to settings
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'logout') {
+                _handleLogout();
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout),
+                    SizedBox(width: 8),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -148,6 +176,21 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refreshPatientState() async {
     final backendService = context.read<BackendService>();
     await backendService.getPatientState(Config.patientId);
+  }
+
+  Future<void> _handleLogout() async {
+    final authService = context.read<AuthService>();
+    final backendService = context.read<BackendService>();
+    final eegService = context.read<EEGService>();
+
+    // Disconnect all services
+    backendService.disconnectWebSocket();
+    if (eegService.isConnected) {
+      eegService.disconnect();
+    }
+
+    // Logout
+    await authService.logout();
   }
 
   @override
