@@ -17,9 +17,10 @@ CREATE TABLE IF NOT EXISTS features (
     patient_id VARCHAR(100) REFERENCES patients(patient_id),
     ts TIMESTAMP NOT NULL,
     feature_json JSONB NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_patient_ts (patient_id, ts DESC)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_patient_ts ON features (patient_id, ts DESC);
 
 -- Predictions table
 CREATE TABLE IF NOT EXISTS predictions (
@@ -29,9 +30,10 @@ CREATE TABLE IF NOT EXISTS predictions (
     risk FLOAT NOT NULL,
     state VARCHAR(50) NOT NULL,
     model_version VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_patient_pred_ts (patient_id, ts DESC)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_patient_pred_ts ON predictions (patient_id, ts DESC);
 
 -- Alerts table
 CREATE TABLE IF NOT EXISTS alerts (
@@ -42,9 +44,10 @@ CREATE TABLE IF NOT EXISTS alerts (
     message TEXT,
     severity VARCHAR(20),
     acknowledged BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_patient_alerts (patient_id, ts DESC)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_patient_alerts ON alerts (patient_id, ts DESC);
 
 -- Insert demo patient
 INSERT INTO patients (patient_id, name, age, notes)
