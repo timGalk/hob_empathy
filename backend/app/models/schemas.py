@@ -106,3 +106,61 @@ class PatientAssignmentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Dashboard and History Schemas
+
+class PredictionHistory(BaseModel):
+    """Historical prediction record"""
+    id: int
+    patient_id: str
+    timestamp: datetime
+    window_start: datetime
+    risk: float
+    state: str
+    model_version: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AlertHistory(BaseModel):
+    """Historical alert record"""
+    id: int
+    patient_id: str
+    timestamp: datetime
+    alert_type: str
+    severity: str
+    message: str
+    risk_score: Optional[float] = None
+    acknowledged: bool
+    acknowledged_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PatientDashboard(BaseModel):
+    """Complete patient dashboard data"""
+    patient_id: str
+    name: Optional[str] = None
+    age: Optional[int] = None
+    current_state: PatientState
+    recent_predictions: List[PredictionHistory]
+    active_alerts: List[AlertHistory]
+    risk_trend: List[float]  # Last 20 risk scores
+    avg_risk_24h: float
+    alerts_24h: int
+
+
+class DashboardSummary(BaseModel):
+    """Summary for all patients assigned to a user"""
+    total_patients: int
+    high_risk_patients: int
+    active_alerts: int
+    patients: List[PatientDashboard]
+
+
+class AlertAcknowledge(BaseModel):
+    """Alert acknowledgment request"""
+    alert_id: int

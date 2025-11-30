@@ -8,7 +8,7 @@ from xgboost import XGBClassifier
 # =========================
 # CONFIG
 # =========================
-MODEL_PATH = "absence_detector_model.pkl"
+MODEL_PATH = "absence_detector_model.json"
 SCALER_PATH = "absence_detector_scaler.pkl"
 WINDOW_SIZE = 256  # same as training
 
@@ -75,8 +75,9 @@ def remove_motion_artifacts(X_eeg, X_acc):
 # LOAD MODEL & SCALER
 # =========================
 
-clf = joblib.load(MODEL_PATH)
-scaler = joblib.load(SCALER_PATH)
+clf = XGBClassifier()
+clf.load_model(MODEL_PATH)
+# scaler = joblib.load(SCALER_PATH)
 
 # =========================
 # MAIN FUNCTION
@@ -98,8 +99,8 @@ def classify_csv(file_path):
         feature_list.append(extract_features(eeg_win, acc_win))
 
     X_features = np.array(feature_list)
-    X_scaled = scaler.transform(X_features)
-    y_pred = clf.predict(X_scaled)
+    # X_scaled = scaler.transform(X_features)
+    y_pred = clf.predict(X_features)
 
     return y_pred  # returns 0/1 for each window
 
