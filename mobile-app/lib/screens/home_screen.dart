@@ -6,8 +6,10 @@ import '../services/processing_service.dart';
 import '../services/anomaly_detection_service.dart';
 import '../services/backend_service.dart';
 import '../services/auth_service.dart';
+import '../services/scenario_simulation_service.dart';
 import '../models/eeg_data.dart';
 import '../widgets/eeg_chart_widget.dart';
+import '../widgets/scenario_selector.dart';
 import '../utils/config.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,25 +21,34 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late AnomalyDetectionService _anomalyService;
+  late ScenarioSimulationService _scenarioService;
   StreamSubscription? _eegSubscription;
   StreamSubscription? _featuresSubscription;
   StreamSubscription? _anomalySubscription;
+  StreamSubscription? _scenarioDataSubscription;
+  StreamSubscription? _scenarioPredictionSubscription;
+
+  // Store reference to backend service for safe disposal
+  BackendService? _backendService;
 
   bool _isMonitoring = false;
   double _currentRisk = 0.0;
   EEGFeatures? _currentFeatures;
+  AbnormalScenario? _selectedScenario;
+  bool _alarmShown = false;
 
   @override
   void initState() {
     super.initState();
     _anomalyService = AnomalyDetectionService();
+    _scenarioService = ScenarioSimulationService();
     _setupListeners();
   }
 
   void _setupListeners() {
     final eegService = context.read<EEGService>();
     final processingService = context.read<ProcessingService>();
-    final backendService = context.read<BackendService>();
+    _backendService = context.read<BackendService>();
 
     // Listen to EEG data stream
     _eegSubscription = eegService.dataStream.listen((sample) {
@@ -45,7 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // Listen to extracted features and send to backend
-    _featuresSubscription = processingService.featuresStream.listen((features) async {
+    _featuresSubscription =
+        processingService.featuresStream.listen((features) async {
       setState(() {
         _currentFeatures = features;
       });
@@ -57,23 +69,50 @@ class _HomeScreenState extends State<HomeScreen> {
         features: features,
       );
 
-      await backendService.sendFeatures(payload);
+      await _backendService?.sendFeatures(payload);
 
       // Analyze for anomalies (local processing if needed)
       _anomalyService.analyzeFeatures(features);
     });
 
     // Listen to backend predictions via notifier
-    backendService.addListener(_handleBackendUpdate);
+    _backendService?.addListener(_handleBackendUpdate);
 
     // Listen to anomaly predictions
-    _anomalySubscription = _anomalyService.predictionStream.listen((prediction) {
+    _anomalySubscription =
+        _anomalyService.predictionStream.listen((prediction) {
       setState(() {
         _currentRisk = prediction.risk;
       });
 
       // If high risk detected, navigate to alert screen immediately
       if (prediction.isAnomaly && mounted) {
+        _showAnomalyAlert();
+      }
+    });
+
+    // Setup scenario simulation listeners
+    _setupScenarioListeners();
+  }
+
+  void _setupScenarioListeners() {
+    final processingService = context.read<ProcessingService>();
+
+    // Listen to scenario EEG data stream
+    _scenarioDataSubscription = _scenarioService.dataStream.listen((sample) {
+      processingService.processSample(sample);
+    });
+
+    // Listen to scenario predictions (local simulation)
+    _scenarioPredictionSubscription =
+        _scenarioService.predictionStream.listen((prediction) {
+      setState(() {
+        _currentRisk = prediction.risk;
+      });
+
+      // If high risk detected and alarm not already shown, navigate to alert screen
+      if (prediction.risk >= 0.6 && mounted && !_alarmShown) {
+        _alarmShown = true;
         _showAnomalyAlert();
       }
     });
@@ -90,7 +129,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAnomalyAlert() {
-    Navigator.of(context).pushNamed('/alert_health');
+    Navigator.of(context).pushNamed('/alert_health').then((_) {
+      // Reset alarm flag when returning from alert screen
+      _alarmShown = false;
+    });
+  }
+
+  void _startScenarioSimulation() {
+    if (_selectedScenario == null) return;
+
+    setState(() {
+      _isMonitoring = true;
+      _alarmShown = false;
+    });
+
+    _scenarioService.startScenario(_selectedScenario!);
+  }
+
+  void _stopScenarioSimulation() {
+    setState(() {
+      _isMonitoring = false;
+      _currentRisk = 0.0;
+      _alarmShown = false;
+    });
+
+    _scenarioService.stopSimulation();
   }
 
   void _toggleMonitoring() {
@@ -121,11 +184,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _eegSubscription?.cancel();
     _featuresSubscription?.cancel();
     _anomalySubscription?.cancel();
+    _scenarioDataSubscription?.cancel();
+    _scenarioPredictionSubscription?.cancel();
 
-    // Remove backend listener
-    final backendService = context.read<BackendService>();
-    backendService.removeListener(_handleBackendUpdate);
-    backendService.disconnectWebSocket();
+    // Stop scenario simulation
+    _scenarioService.dispose();
+
+    // Remove backend listener (use stored reference, not context.read)
+    _backendService?.removeListener(_handleBackendUpdate);
+    _backendService?.disconnectWebSocket();
 
     super.dispose();
   }
@@ -164,6 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _buildStatusCard(),
             const SizedBox(height: 20),
+            _buildScenarioSimulator(),
+            const SizedBox(height: 20),
             _buildControlPanel(),
             const SizedBox(height: 20),
             _buildEEGChart(),
@@ -172,6 +241,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildScenarioSimulator() {
+    return ScenarioSelector(
+      selectedScenario: _selectedScenario,
+      isSimulating: _scenarioService.isSimulating,
+      currentRisk: _scenarioService.currentRisk,
+      currentState: _scenarioService.currentState,
+      onScenarioSelected: (scenario) {
+        setState(() {
+          _selectedScenario = scenario;
+        });
+      },
+      onStartSimulation: _startScenarioSimulation,
+      onStopSimulation: _stopScenarioSimulation,
     );
   }
 
@@ -277,12 +362,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(_isMonitoring ? Icons.stop : Icons.play_arrow),
                 label: Text(
                   _isMonitoring ? 'Stop Monitoring' : 'Start Monitoring',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isMonitoring
-                      ? Colors.red
-                      : const Color(0xFF6C63FF),
+                  backgroundColor:
+                      _isMonitoring ? Colors.red : const Color(0xFF6C63FF),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -300,6 +385,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildEEGChart() {
     final eegService = context.watch<EEGService>();
 
+    // Use scenario data stream when scenario is simulating, otherwise use EEG service
+    final dataStream = _scenarioService.isSimulating
+        ? _scenarioService.dataStream
+        : eegService.dataStream;
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -308,28 +398,50 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Real-Time EEG Signal',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3748),
-              ),
+            Row(
+              children: [
+                const Text(
+                  'Real-Time EEG Signal',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3748),
+                  ),
+                ),
+                const Spacer(),
+                if (_scenarioService.isSimulating)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'SIMULATION',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             SizedBox(
               height: 200,
-              child: !_isMonitoring
+              child: !_isMonitoring && !_scenarioService.isSimulating
                   ? Center(
                       child: Text(
-                        'Start monitoring to view EEG data',
+                        'Start monitoring or simulation to view EEG data',
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 14,
                         ),
                       ),
                     )
-                  : EEGChartWidget(dataStream: eegService.dataStream),
+                  : EEGChartWidget(dataStream: dataStream),
             ),
           ],
         ),
@@ -374,14 +486,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildFeatureRow('Delta Power', _currentFeatures!.deltaPower, Colors.purple),
-            _buildFeatureRow('Theta Power', _currentFeatures!.thetaPower, Colors.blue),
-            _buildFeatureRow('Alpha Power', _currentFeatures!.alphaPower, Colors.green),
-            _buildFeatureRow('Beta Power', _currentFeatures!.betaPower, Colors.orange),
+            _buildFeatureRow(
+                'Delta Power', _currentFeatures!.deltaPower, Colors.purple),
+            _buildFeatureRow(
+                'Theta Power', _currentFeatures!.thetaPower, Colors.blue),
+            _buildFeatureRow(
+                'Alpha Power', _currentFeatures!.alphaPower, Colors.green),
+            _buildFeatureRow(
+                'Beta Power', _currentFeatures!.betaPower, Colors.orange),
             const Divider(height: 24),
             _buildFeatureRow('Entropy', _currentFeatures!.entropy, Colors.teal),
-            _buildFeatureRow('Mobility', _currentFeatures!.mobility, Colors.indigo),
-            _buildFeatureRow('Complexity', _currentFeatures!.complexity, Colors.pink),
+            _buildFeatureRow(
+                'Mobility', _currentFeatures!.mobility, Colors.indigo),
+            _buildFeatureRow(
+                'Complexity', _currentFeatures!.complexity, Colors.pink),
           ],
         ),
       ),

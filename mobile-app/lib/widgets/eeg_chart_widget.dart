@@ -72,8 +72,8 @@ class _EEGChartWidgetState extends State<EEGChartWidget> {
             Expanded(
               child: LineChart(
                 LineChartData(
-                  minY: -100,
-                  maxY: 100,
+                  minY: -300,
+                  maxY: 300,
                   lineBarsData: [
                     _createLineData(0, Colors.blue),
                     _createLineData(1, Colors.green),
@@ -106,7 +106,7 @@ class _EEGChartWidgetState extends State<EEGChartWidget> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: 50,
+                    horizontalInterval: 100,
                   ),
                   borderData: FlBorderData(show: true),
                 ),
