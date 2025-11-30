@@ -30,15 +30,22 @@ class SplashScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 24.0),
-                child: Image.asset(
-                  isDark ? 'assets/images/LogoBlackTheme.png' : 'assets/icons/LogoWhiteTheme.png',
-                  width: 120,
-                  height: 120,
+              // Upper half: Logo fills the space
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 24.0),
+                  child: Image.asset(
+                    isDark ? 'assets/images/LogoBlackTheme.png' : 'assets/images/LogoWhiteTheme.png',
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
+              // Lower half: Welcome box
               Expanded(
+                flex: 1,
                 child: Center(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -80,9 +87,8 @@ class SplashScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              // Bottom: Login button
               Padding(
-                // Reduce top spacing so the button sits higher on screen
-                // and account for device bottom inset to avoid overlap
                 padding: EdgeInsets.fromLTRB(24, 8, 24, 24 + MediaQuery.of(context).padding.bottom),
                 child: SizedBox(
                   width: double.infinity,
