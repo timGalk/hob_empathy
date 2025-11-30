@@ -12,7 +12,7 @@ import matplotlib
 import numpy as np
 import time
 import threading
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from scipy.signal import butter, sosfiltfilt
 from brainaccess import core
 from brainaccess.core.eeg_manager import EEGManager
@@ -27,7 +27,7 @@ durSec = 1
 
 ####################################################################
 
-matplotlib.use("TKAgg", force=True)
+#matplotlib.use("TKAgg", force=True)
 
 
 def butter_bandpass(
@@ -192,25 +192,25 @@ if __name__ == "__main__":
     eeg_data = eeg_data + np.arange(eeg_enabled_nr)[:, np.newaxis]
 
     # Create subplots
-    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+   # fig, axs = plt.subplots(2, 1, figsize=(10, 10))
 
     # Plot the data
-    axs[0].plot(eeg_data.T)
-    axs[0].set_ylabel("EEG Channels")
-    axs[0].set_xlim([0, 250 * duration])
-    eeg_labels = ["F4", "C4", "F3", "O2", "O1", "F3", "C3", "P3"][:eeg_enabled_nr]
+    #axs[0].plot(eeg_data.T)
+    #axs[0].set_ylabel("EEG Channels")
+    #axs[0].set_xlim([0, 250 * duration])
+    #eeg_labels = ["F4", "C4", "F3", "O2", "O1", "F3", "C3", "P3"][:eeg_enabled_nr]
 
     # Add legend for EEG
-    for idx, label in enumerate(eeg_labels):
-        axs[0].plot([], [], label=label)
+   # for idx, label in enumerate(eeg_labels):
+   #     axs[0].plot([], [], label=label)
 
-    axs[0].legend(loc="upper right")
+    #axs[0].legend(loc="upper right")
 
-    if has_accel:
-        axs[1].plot(dat[-4:-1, :].T)
-        axs[1].set_ylabel("Accelerometer")
-    else:
-        axs[1].axis("off")  # Hide the unused subplot
+    #if has_accel:
+     #   axs[1].plot(dat[-4:-1, :].T)
+      #  axs[1].set_ylabel("Accelerometer")
+    #else:
+     #   axs[1].axis("off")  # Hide the unused subplot
 
 
 
@@ -259,4 +259,4 @@ if __name__ == "__main__":
         for row in data_to_save[400:]:
             writer.writerow([f"{x:.6f}" if isinstance(x, float) else str(int(x)) for x in row])
 
-    plt.show()
+  #  plt.show()

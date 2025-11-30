@@ -1,5 +1,4 @@
-"""
-EEG measurement example
+"""EEG measurement example
 
 Example how to get measurements using brainaccess library
 
@@ -14,7 +13,7 @@ import numpy as np
 import time
 import threading
 import matplotlib.pyplot as plt
-from scipy.signal import butter, sosfiltfilt, savgol_filter   # <-- DODANE: savgol_filter
+from scipy.signal import butter, sosfiltfilt
 from brainaccess import core
 from brainaccess.core.eeg_manager import EEGManager
 import brainaccess.core.eeg_channel as eeg_channel
@@ -23,12 +22,12 @@ from brainaccess.core.gain_mode import (
 )
 
 ####################################################################
-duration = 5
+duration = 40
 durSec = 1
 
 ####################################################################
 
-matplotlib.use("TKAgg", force=True)
+#matplotlib.use("TKAgg", force=True)
 
 
 def butter_bandpass(
@@ -87,12 +86,12 @@ if __name__ == "__main__":
 
     # scan for devices
     devices = core.scan()
-    print("Found devices:", len(devices))
-    print(f"Devices: {[device.name for device in devices]}")
+  #  print("Found devices:", len(devices))
+  #  print(f"Devices: {[device.name for device in devices]}")
 
     # connect to the device
     with EEGManager() as mgr:
-        print("Connecting to device:", device_name)
+       # print("Connecting to device:", device_name)
         _status = mgr.connect(device_name)
         if _status == 2:
             raise Exception("Stream is incompatible. Update the firmware.")
@@ -100,12 +99,12 @@ if __name__ == "__main__":
             raise Exception("Connection failed")
 
         # battery info
-        print(f"battery level: {mgr.get_battery_info().level} %")
+       # print(f"battery level: {mgr.get_battery_info().level} %")
 
         # Get electrode count
         device_features = mgr.get_device_features()
         eeg_channels_number = device_features.electrode_count()
-        print(f"Device has {eeg_channels_number} EEG channels")
+       # print(f"Device has {eeg_channels_number} EEG channels")
 
         # set the channels
         ch_nr = 0
@@ -123,13 +122,14 @@ if __name__ == "__main__":
         # check if the device has accelerometer
         has_accel = device_features.has_accel()
         if has_accel:
-            print("Setting the accelerometer")
+       #     print("Setting the accelerometer")
             mgr.set_channel_enabled(eeg_channel.ACCELEROMETER, True)
             ch_nr += 1
             mgr.set_channel_enabled(eeg_channel.ACCELEROMETER + 1, True)
             ch_nr += 1
             mgr.set_channel_enabled(eeg_channel.ACCELEROMETER + 2, True)
             ch_nr += 1
+
 
         mgr.set_channel_enabled(eeg_channel.SAMPLE_NUMBER, True)
         ch_nr += 1
@@ -152,57 +152,51 @@ if __name__ == "__main__":
         # load defined configuration
         mgr.load_config()
 
+        sound = "/home/dmin/PycharmProjects/HeroesOfTheBrain/other/beep.wav"
+        os.system(f"aplay {sound} >/dev/null 2>&1")
+
         # start the stream
         mgr.start_stream()
-        print("Stream started")
+      #  print("Stream started")
+
 
         # collect data
         time.sleep(4)
         for i in range(duration):
             time.sleep(durSec)
-            print(f"Collecting data {i + 1}/{duration}")
+      #      print(f"Collecting data {i + 1}/{duration}")
 
         # get the data
         dat = get_data()
 
         # stop the stream
         mgr.stop_stream()
-        print("Stream stopped")
+     #   print("Stream stopped")
+        sound = "/home/dmin/PycharmProjects/HeroesOfTheBrain/other/beep.wav"
+        os.system(f"aplay {sound} >/dev/null 2>&1")
         time.sleep(1)
 
         # The EEGManager destructor calls mgr.disconnect()
         # so we don't need to call it here
 
-    print("Disconnected from the device")
+    #print("Disconnected from the device")
     time.sleep(1)
 
     # close the core
     core.close()
-    print("Core closed")
+    #print("Core closed")
 
     # plot the data
-    print("Plotting the data")
+    #print("Plotting the data")
 
     # Apply bandpass filter to EEG data
     eeg_data = dat[1: eeg_enabled_nr + 1, :]
 
     eeg_data = eeg_data - np.mean(eeg_data, axis=1, keepdims=True)
     eeg_data = butter_bandpass_filter(eeg_data, 1, 40, sr)
-
-    # DODANE: Savitzky-Golay filter do oczyszczenia sygnału
-    window_length = 51 if sr >= 250 else 31
-    if window_length % 2 == 0:
-        window_length += 1
-    eeg_data = np.apply_along_axis(
-        lambda x: savgol_filter(x, window_length=window_length, polyorder=3),
-        axis=1,
-        arr=eeg_data
-    )
-    # KONIEC DODANEJ FILTRACJI
-
     # Add offsets for visualization
     eeg_data = eeg_data + np.arange(eeg_enabled_nr)[:, np.newaxis]
-
+    """
     # Create subplots
     fig, axs = plt.subplots(2, 1, figsize=(10, 10))
 
@@ -223,7 +217,7 @@ if __name__ == "__main__":
         axs[1].set_ylabel("Accelerometer")
     else:
         axs[1].axis("off")  # Hide the unused subplot
-
+"""
 
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -231,19 +225,24 @@ if __name__ == "__main__":
     csv_filename = os.path.join(f"eeg_recordings/eeg_recording_{device_name.replace(' ', '_')}_{timestamp}.csv")
 
     data_to_save = []
-    print("len eeg data.T", len(eeg_data))
-    print("len eeg data.T elem", len(eeg_data.T[0]))
+    #print("len eeg data.T", len(eeg_data))
+    #print("len eeg data.T elem", len(eeg_data.T[0]))
     count = 0
     for row in range(len(eeg_data.T)):
         data_to_save.append([])
         count += 1
+        data_to_save[row].append(count/sr)
         for i in range(len(eeg_data.T[0])):
-            data_to_save[row].append(count/sr)
-            data_to_save[row].append(eeg_data.T[row][i] - np.arange(eeg_enabled_nr)[i])  # <-- usuwamy offset przed zapisem!
+            data_to_save[row].append(eeg_data.T[row][i])
 
-    for row in range(len(dat.T)):
+    for row in range(len(dat.T)):  # teraz: (samples, channels)
+        if row >= sr * 20 and row <= 30 * sr:
+            data_to_save[row].append(1)
+        else:
+            data_to_save[row].append(0)
         for i in dat[-4:-1, :].T[row]:
             data_to_save[row].append(i)
+
 
 
     # # === ZAPIS DO CSV ===
@@ -257,15 +256,16 @@ if __name__ == "__main__":
         writer.writerow([f"# Częstotliwość próbkowania: {sr} Hz"])
         writer.writerow([f"# Czas nagrania: {duration} s"])
         writer.writerow([f"# Liczba kanałów EEG: {eeg_channels_number}"])
-        writer.writerow([f"# Przetwarzanie: bandpass 1-40 Hz + Savitzky-Golay (window={window_length}, polyorder=3)"])  # <-- info o filtracji
         writer.writerow(["# Kolejność kolumn poniżej:"])
 
         # Nazwy kolumn
         writer.writerow(
-            ["SampleNumber", "F4", "C4", "P4", "O2", "O1", "F3", "C3", "P3", "AccZ", "AccY", "AccX", "Status"])
+            ["Time", "F4", "C4", "P4", "O2", "O1", "F3", "C3", "P3", "Obsense", "AccZ", "AccY", "AccX"])
 
-        # Dane (teraz już z wygładzonym sygnałem!)
-        for row in data_to_save:
+        # Dane (transponowane – każdy wiersz to jedna próbka czasowa)
+
+
+        for row in data_to_save[400:]:
             writer.writerow([f"{x:.6f}" if isinstance(x, float) else str(int(x)) for x in row])
 
-    plt.show()
+ #   plt.show()
