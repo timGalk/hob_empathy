@@ -10,7 +10,9 @@ import '../services/scenario_simulation_service.dart';
 import '../models/eeg_data.dart';
 import '../widgets/eeg_chart_widget.dart';
 import '../widgets/scenario_selector.dart';
+
 import '../utils/config.dart';
+import '../theme/theme_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -203,44 +205,107 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
+    final themeProvider = context.watch<ThemeProvider>();
+    final bool isDark = themeProvider.isDark;
+    // Splash-like gradient colors
+    final Color bgGradientStart = const Color.fromARGB(255, 110, 140, 200);
+    final Color bgGradientEnd = const Color.fromARGB(255, 180, 210, 255);
+    final Color darkBgGradientStart = const Color.fromARGB(255, 40, 55, 95);
+    final Color darkBgGradientEnd = const Color.fromARGB(255, 18, 30, 60);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: const Text(
-          'Personal EEG Monitor',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: const Color(0xFF6C63FF),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await authService.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
-            tooltip: 'Logout',
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [darkBgGradientStart, darkBgGradientEnd]
+                : [bgGradientStart, bgGradientEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatusCard(),
-            const SizedBox(height: 20),
-            _buildScenarioSimulator(),
-            const SizedBox(height: 20),
-            _buildControlPanel(),
-            const SizedBox(height: 20),
-            _buildEEGChart(),
-            const SizedBox(height: 20),
-          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Custom AppBar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Personal EEG Monitor',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: Color(0xFF2D3748),
+                          fontFamily: 'Montserrat',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.logout),
+                      color: Color(0xFF2D3748),
+                      onPressed: () async {
+                        await authService.logout();
+                        if (context.mounted) {
+                          Navigator.of(context).pushReplacementNamed('/login');
+                        }
+                      },
+                      tooltip: 'Logout',
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildStatusCard(),
+                      const SizedBox(height: 20),
+                      _buildScenarioSimulator(),
+                      const SizedBox(height: 20),
+                      _buildControlPanel(),
+                      const SizedBox(height: 20),
+                      _buildEEGChart(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.of(context).padding.bottom),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () => themeProvider.toggleTheme(),
+                    icon: Icon(
+                      isDark ? Icons.dark_mode : Icons.light_mode,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme',
+                      style: const TextStyle(
+                        fontFamily: 'Montserrat',
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF325498),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
