@@ -25,29 +25,40 @@ CREATE INDEX IF NOT EXISTS idx_patient_ts ON features (patient_id, ts DESC);
 -- Predictions table
 CREATE TABLE IF NOT EXISTS predictions (
     id SERIAL PRIMARY KEY,
-    patient_id VARCHAR(100) REFERENCES patients(patient_id),
-    ts TIMESTAMP NOT NULL,
+    patient_id VARCHAR(100) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    window_start TIMESTAMP NOT NULL,
+    -- EEG Features
+    delta_power FLOAT,
+    theta_power FLOAT,
+    alpha_power FLOAT,
+    beta_power FLOAT,
+    entropy FLOAT,
+    mobility FLOAT,
+    complexity FLOAT,
+    -- Prediction results
     risk FLOAT NOT NULL,
     state VARCHAR(50) NOT NULL,
-    model_version VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    model_version VARCHAR(50)
 );
 
-CREATE INDEX IF NOT EXISTS idx_patient_pred_ts ON predictions (patient_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_predictions_timestamp ON predictions (patient_id, timestamp DESC);
 
 -- Alerts table
 CREATE TABLE IF NOT EXISTS alerts (
     id SERIAL PRIMARY KEY,
-    patient_id VARCHAR(100) REFERENCES patients(patient_id),
-    ts TIMESTAMP NOT NULL,
-    alert_type VARCHAR(100) NOT NULL,
+    patient_id VARCHAR(100) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    alert_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
     message TEXT,
-    severity VARCHAR(20),
+    risk_score FLOAT,
     acknowledged BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    acknowledged_at TIMESTAMP,
+    acknowledged_by INTEGER REFERENCES users(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_patient_alerts ON alerts (patient_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_patient_alerts ON alerts (patient_id, timestamp DESC);
 
 -- Users table for authentication
 CREATE TABLE IF NOT EXISTS users (

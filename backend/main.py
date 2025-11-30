@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.api.auth import router as auth_router
+from app.api.admin import router as admin_router
 from app.database.db import init_db
 
 app = FastAPI(
@@ -25,6 +26,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(auth_router)  # Auth routes already have /api/v1/auth prefix
+app.include_router(admin_router)  # Admin routes
 app.include_router(router)
 
 @app.on_event("startup")
