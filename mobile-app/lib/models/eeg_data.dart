@@ -120,4 +120,7 @@ class PatientState {
     if (risk < 0.6) return Colors.orange;
     return Colors.red;
   }
+
+  /// Check if this prediction indicates an anomaly (elevated risk)
+  bool get isAnomaly => risk >= 0.6;
 }

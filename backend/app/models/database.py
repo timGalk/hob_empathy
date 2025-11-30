@@ -49,3 +49,49 @@ class Patient(Base):
 
     # Relationships
     user_assignments = relationship("UserPatientAssignment", back_populates="patient")
+    predictions = relationship("Prediction", back_populates="patient", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="patient", cascade="all, delete-orphan")
+
+
+class Prediction(Base):
+    __tablename__ = "predictions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(String(100), ForeignKey("patients.patient_id", ondelete="CASCADE"), index=True)
+    timestamp = Column(TIMESTAMP, default=datetime.utcnow, index=True)
+    window_start = Column(TIMESTAMP, nullable=False)
+
+    # Features
+    delta_power = Column(Float)
+    theta_power = Column(Float)
+    alpha_power = Column(Float)
+    beta_power = Column(Float)
+    entropy = Column(Float)
+    mobility = Column(Float)
+    complexity = Column(Float)
+
+    # Prediction results
+    risk = Column(Float, nullable=False)  # 0.0 to 1.0
+    state = Column(String(50), nullable=False)  # normal, mild, elevated
+    model_version = Column(String(50))
+
+    # Relationships
+    patient = relationship("Patient", back_populates="predictions")
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(String(100), ForeignKey("patients.patient_id", ondelete="CASCADE"), index=True)
+    timestamp = Column(TIMESTAMP, default=datetime.utcnow, index=True)
+    alert_type = Column(String(50), nullable=False)  # absence_detected, elevated_risk, etc.
+    severity = Column(String(20), nullable=False)  # low, medium, high
+    message = Column(Text)
+    risk_score = Column(Float)
+    acknowledged = Column(Boolean, default=False)
+    acknowledged_at = Column(TIMESTAMP)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"))
+
+    # Relationships
+    patient = relationship("Patient", back_populates="alerts")

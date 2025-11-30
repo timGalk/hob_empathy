@@ -31,6 +31,11 @@ class AlertHealthScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () =>
+              Navigator.pop(context, true), // Return true to indicate dismissal
+        ),
         title: Text(
           'Health Alert',
           style: TextStyle(
@@ -109,9 +114,7 @@ class AlertHealthScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -137,15 +140,14 @@ class AlertHealthScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pop(
+                            context, true); // Return true to indicate dismissal
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(

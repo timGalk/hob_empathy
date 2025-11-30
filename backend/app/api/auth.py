@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from datetime import timedelta
 
 from app.models.schemas import UserCreate, UserLogin, UserResponse, Token
-from app.models.database import User
+from app.models.database import User, Patient, UserPatientAssignment
 from app.database.db import get_db
 from app.utils.auth import (
     get_password_hash,
@@ -127,6 +127,32 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_user)
 
+    # Create or get patient_001 (default patient for demo/testing)
+    patient_id = "patient_001"
+    patient_result = await db.execute(
+        select(Patient).where(Patient.patient_id == patient_id)
+    )
+    patient = patient_result.scalar_one_or_none()
+
+    if not patient:
+        # Create patient_001 if it doesn't exist
+        patient = Patient(
+            patient_id=patient_id,
+            name="Demo Patient",
+            age=65,
+            notes="Default patient for testing and development"
+        )
+        db.add(patient)
+        await db.commit()
+
+    # Assign the new user to patient_001
+    assignment = UserPatientAssignment(
+        user_id=new_user.id,
+        patient_id=patient_id
+    )
+    db.add(assignment)
+    await db.commit()
+
     # Create access token
     access_token = create_access_token(
         data={"sub": new_user.username, "user_id": new_user.id},
@@ -171,6 +197,43 @@ async def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive"
         )
+
+    # Ensure user has access to patient_001 (for existing users)
+    patient_id = "patient_001"
+
+    # Check if assignment exists
+    assignment_result = await db.execute(
+        select(UserPatientAssignment).where(
+            UserPatientAssignment.user_id == user.id,
+            UserPatientAssignment.patient_id == patient_id
+        )
+    )
+    assignment = assignment_result.scalar_one_or_none()
+
+    if not assignment:
+        # Create patient_001 if it doesn't exist
+        patient_result = await db.execute(
+            select(Patient).where(Patient.patient_id == patient_id)
+        )
+        patient = patient_result.scalar_one_or_none()
+
+        if not patient:
+            patient = Patient(
+                patient_id=patient_id,
+                name="Demo Patient",
+                age=65,
+                notes="Default patient for testing and development"
+            )
+            db.add(patient)
+            await db.commit()
+
+        # Assign user to patient_001
+        assignment = UserPatientAssignment(
+            user_id=user.id,
+            patient_id=patient_id
+        )
+        db.add(assignment)
+        await db.commit()
 
     # Create access token
     access_token = create_access_token(

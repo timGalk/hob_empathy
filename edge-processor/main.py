@@ -9,6 +9,7 @@ import aiohttp
 from filters.signal_filters import bandpass_filter, notch_filter
 from features.feature_extraction import extract_features
 from utils.config import Config
+from utils.eeg_simulator import EEGSimulator, AbnormalityType
 
 class EEGProcessor:
     def __init__(self, patient_id: str, backend_url: str):
@@ -89,19 +90,57 @@ class EEGProcessor:
             # TODO: Implement offline queue
 
 if __name__ == "__main__":
-    # Demo mode - simulate EEG data
-    async def simulate_eeg_data():
-        """Generate simulated EEG data for testing"""
+    # Demo mode - simulate EEG data with realistic abnormalities
+    async def simulate_eeg_data(abnormality_prob=0.15):
+        """
+        Generate simulated EEG data with abnormalities for testing
+
+        Args:
+            abnormality_prob: Probability of abnormality occurrence (0.0-1.0)
+        """
+        simulator = EEGSimulator(sampling_rate=250, n_channels=8)
+        print("EEG Simulator started with realistic signal generation")
+        print(f"Abnormality probability: {abnormality_prob * 100}%")
+        print("Possible abnormalities: spike-wave, high_amplitude, frequency_shift, motion_artifact, suppression")
+        print("-" * 80)
+
+        sample_count = 0
+        last_abnormality_report = None
+
         while True:
             timestamp = time.time()
-            # 8 channels of simulated data
-            channels = np.random.randn(8) * 50  # microvolts
+
+            # Generate one sample (1 timepoint across all 8 channels)
+            channels_data, labels = simulator.generate_sample(
+                n_samples=1,
+                abnormality_prob=abnormality_prob
+            )
+
+            # Extract the single timepoint
+            channels = channels_data[0]  # Shape: (8,)
+
+            # Report when abnormality starts/stops
+            current_label = labels[0]
+            if current_label != "none" and current_label != last_abnormality_report:
+                print(f"\n⚠ ABNORMALITY DETECTED: {current_label.upper()} started at sample {sample_count}")
+                last_abnormality_report = current_label
+            elif current_label == "none" and last_abnormality_report is not None:
+                print(f"✓ Normal EEG resumed at sample {sample_count}\n")
+                last_abnormality_report = None
+
             yield timestamp, channels
+
+            sample_count += 1
             await asyncio.sleep(1/250)  # 250 Hz sampling
+
+    # Configuration
+    ABNORMALITY_PROBABILITY = 0.2  # 20% chance of abnormalities
 
     processor = EEGProcessor(
         patient_id="patient_001",
         backend_url="http://localhost:8000"
     )
 
-    asyncio.run(processor.process_stream(simulate_eeg_data()))
+    print("Starting Edge Processor with Realistic EEG Simulation")
+    print("=" * 80)
+    asyncio.run(processor.process_stream(simulate_eeg_data(ABNORMALITY_PROBABILITY)))

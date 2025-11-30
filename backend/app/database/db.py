@@ -39,9 +39,84 @@ sync_engine = create_engine(
 
 async def init_db():
     """Initialize database tables"""
+    from sqlalchemy import text
+
     async with engine.begin() as conn:
         # Create all tables defined in Base metadata
         await conn.run_sync(Base.metadata.create_all)
+
+        # Run migration to add missing columns if they don't exist
+        try:
+            print("Running database migrations...")
+
+            # Add missing columns to predictions table
+            await conn.execute(text("""
+                ALTER TABLE predictions
+                ADD COLUMN IF NOT EXISTS window_start TIMESTAMP,
+                ADD COLUMN IF NOT EXISTS delta_power FLOAT,
+                ADD COLUMN IF NOT EXISTS theta_power FLOAT,
+                ADD COLUMN IF NOT EXISTS alpha_power FLOAT,
+                ADD COLUMN IF NOT EXISTS beta_power FLOAT,
+                ADD COLUMN IF NOT EXISTS entropy FLOAT,
+                ADD COLUMN IF NOT EXISTS mobility FLOAT,
+                ADD COLUMN IF NOT EXISTS complexity FLOAT
+            """))
+
+            # Rename ts to timestamp in predictions if ts exists
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_name = 'predictions'
+                        AND column_name = 'ts'
+                    ) THEN
+                        ALTER TABLE predictions RENAME COLUMN ts TO timestamp;
+                    END IF;
+                END $$
+            """))
+
+            # Add timestamp column if it doesn't exist
+            await conn.execute(text("""
+                ALTER TABLE predictions
+                ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            """))
+
+            # Update alerts table
+            await conn.execute(text("""
+                ALTER TABLE alerts
+                ADD COLUMN IF NOT EXISTS risk_score FLOAT,
+                ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMP,
+                ADD COLUMN IF NOT EXISTS acknowledged_by INTEGER
+            """))
+
+            # Rename ts to timestamp in alerts if ts exists
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns
+                        WHERE table_name = 'alerts'
+                        AND column_name = 'ts'
+                    ) THEN
+                        ALTER TABLE alerts RENAME COLUMN ts TO timestamp;
+                    END IF;
+                END $$
+            """))
+
+            # Add timestamp column to alerts if it doesn't exist
+            await conn.execute(text("""
+                ALTER TABLE alerts
+                ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            """))
+
+            print("✓ Database migrations completed")
+
+        except Exception as e:
+            print(f"Migration error (may be safe to ignore if already applied): {e}")
+
     print("Database tables initialized")
 
 
