@@ -240,7 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
             _buildEEGChart(),
             const SizedBox(height: 20),
-            _buildFeaturesCard(),
           ],
         ),
       ),
@@ -446,63 +445,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   : EEGChartWidget(dataStream: dataStream),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeaturesCard() {
-    if (_currentFeatures == null) {
-      return Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: Text(
-              'No features extracted yet',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Brain Activity Features',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2D3748),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildFeatureRow(
-                'Delta Power', _currentFeatures!.deltaPower, Colors.purple),
-            _buildFeatureRow(
-                'Theta Power', _currentFeatures!.thetaPower, Colors.blue),
-            _buildFeatureRow(
-                'Alpha Power', _currentFeatures!.alphaPower, Colors.green),
-            _buildFeatureRow(
-                'Beta Power', _currentFeatures!.betaPower, Colors.orange),
-            const Divider(height: 24),
-            _buildFeatureRow('Entropy', _currentFeatures!.entropy, Colors.teal),
-            _buildFeatureRow(
-                'Mobility', _currentFeatures!.mobility, Colors.indigo),
-            _buildFeatureRow(
-                'Complexity', _currentFeatures!.complexity, Colors.pink),
           ],
         ),
       ),
