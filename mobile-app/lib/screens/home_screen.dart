@@ -129,8 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAnomalyAlert() {
-    Navigator.of(context).pushNamed('/alert_health').then((_) {
-      // Reset alarm flag when returning from alert screen
+    Navigator.of(context).pushNamed('/alert_health').then((dismissed) {
+      // Stop simulation and reset when returning from alert screen
+      if (dismissed == true) {
+        _stopScenarioSimulation();
+      }
       _alarmShown = false;
     });
   }
