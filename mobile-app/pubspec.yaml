@@ -1,5 +1,5 @@
-name: eeg_monitor
-description: EEG Dementia Monitoring - Mobile Edge Processor
+name: empathy_app
+description: Empathy App - EEG Dementia Monitoring
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -13,6 +13,8 @@ dependencies:
 
   # State management
   provider: ^6.1.1
+
+  url_launcher: ^6.1.10
 
   # Networking
   http: ^1.1.0

@@ -55,9 +55,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final themeProvider = context.watch<ThemeProvider>();
     final bool isDark = themeProvider.isDark;
 
+    // Increased contrast: slightly darker start, lighter end
+    final Color bgGradientStart = const Color.fromARGB(255, 110, 140, 200);
+    final Color bgGradientEnd = const Color.fromARGB(255, 180, 210, 255);
+
+    // Dark mode gradient colors (darker blueish)
+    // Dark mode adjusted for clearer separation
+    final Color darkBgGradientStart = const Color.fromARGB(255, 40, 55, 95);
+    final Color darkBgGradientEnd = const Color.fromARGB(255, 18, 30, 60);
 
     return Scaffold(
-      backgroundColor:isDark? const Color.fromARGB(255, 30, 30, 66) : Color(0xFF90A7DA), // пастельный фон
+      backgroundColor: isDark ? darkBgGradientStart : bgGradientStart,
       appBar: AppBar(
         title: Consumer<AuthService>(
           builder: (context, authService, child) {
@@ -65,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'EEG Monitor',
+                  'EmpathyApp',
                   style: TextStyle(
                     fontFamily: 'Montserrat',
                     fontWeight: FontWeight.bold,
@@ -86,13 +94,13 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF325498), // тёмно-синяя панель
         actions: [
           IconButton(
-            tooltip: 'Health Alert',
-            onPressed: () => Navigator.of(context).pushNamed('/alert_health'),
+            tooltip: 'Check Alert',
+            onPressed: () => Navigator.of(context).pushNamed('/alert_check'),
             icon: const Icon(Icons.warning, color: Colors.white),
           ),
           IconButton(
-            tooltip: 'Check Alert',
-            onPressed: () => Navigator.of(context).pushNamed('/alert_check'),
+            tooltip: 'Health Alert',
+            onPressed: () => Navigator.of(context).pushNamed('/alert_health'),
             icon: const Icon(Icons.help, color: Colors.white),
           ),
           PopupMenuButton<String>(
@@ -119,10 +127,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Connection status banner
-          const ConnectionStatus(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [darkBgGradientStart, darkBgGradientEnd]
+                : [bgGradientStart, bgGradientEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          children: [
+            // Connection status banner
+            const ConnectionStatus(),
 
           // Risk indicator
           Padding(
@@ -187,6 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showDeviceList,
