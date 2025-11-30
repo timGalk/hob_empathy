@@ -18,7 +18,7 @@ class AlertHealthScreen extends StatelessWidget {
     final Color boxBg = const Color.fromARGB(255, 250, 250, 248);
     final Color borderColor = const Color.fromARGB(255, 60, 10, 10);
     final Color textColor = const Color.fromARGB(255, 85, 15, 15);
-    final Color accentColor = const Color.fromARGB(255, 250, 53, 53);
+    final Color accentColor = const Color.fromARGB(255, 85, 15, 15);
 
     // Dark mode colors (greyish-red tones)
     final Color darkAppBarBg = const Color.fromARGB(255, 100, 50, 50);
