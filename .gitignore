@@ -55,12 +55,7 @@ dist-ssr/
 # Docker
 .dockerignore
 
-# ML Models
-*.pkl
-*.h5
-*.pt
-*.pth
-prediction-engine/models/*.pkl
+
 
 # Environment
 .env.local
