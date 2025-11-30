@@ -115,6 +115,35 @@ class AlertHealthScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // Copied 'MAKE A CALL' button from alert_check
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await makePhoneCall('+48453151159');
+                        // stay on this screen; user will return here after call
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark ? darkAccentColor : accentColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'MAKE A CALL',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'Montserrat',
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
                   SizedBox(
                     width: double.infinity,
                     height: 56,
