@@ -5,7 +5,7 @@ import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/alert_health_screen.dart';
 import 'screens/alert_check_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/home_screen.dart';
 import 'services/eeg_service.dart';
 import 'services/processing_service.dart';
 import 'services/backend_service.dart';
@@ -46,7 +46,7 @@ class EEGMonitorApp extends StatelessWidget {
               '/splash': (context) => const SplashScreen(),
               '/login': (context) => const LoginScreen(),
               '/home': (context) => const HomeScreen(),
-              '/dashboard': (context) => const DashboardScreen(),
+              // '/dashboard': (context) => const DashboardScreen(),
               '/alert_health': (context) => AlertHealthScreen(),
               '/alert_check': (context) => AlertCheckScreen(),
             },
