@@ -3,10 +3,14 @@ import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/alert_health_screen.dart';
+import 'screens/alert_check_screen.dart';
 import 'services/eeg_service.dart';
 import 'services/processing_service.dart';
 import 'services/backend_service.dart';
 import 'services/auth_service.dart';
+import 'theme/theme_provider.dart'; // <-- добавляем ThemeProvider
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const EEGMonitorApp());
@@ -22,20 +26,32 @@ class EEGMonitorApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => EEGService()),
         ChangeNotifierProvider(create: (_) => ProcessingService()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()), // <-- добавили
         ChangeNotifierProxyProvider<AuthService, BackendService>(
           create: (context) => BackendService(context.read<AuthService>()),
           update: (context, authService, backendService) =>
               backendService ?? BackendService(authService),
         ),
       ],
-      child: MaterialApp(
-        title: 'EEG Monitor',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
-        home: const AuthWrapper(),
-        debugShowCheckedModeBanner: false,
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, child) {
+          return MaterialApp(
+            title: 'EEG Monitor',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
+            routes: {
+              '/': (context) => const AuthWrapper(),
+              '/splash': (context) => const SplashScreen(),
+              '/login': (context) => const LoginScreen(),
+              '/home': (context) => const HomeScreen(),
+              '/alert_health': (context) => AlertHealthScreen(),
+              '/alert_check': (context) => AlertCheckScreen(),
+            },
+            initialRoute: '/splash',
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }

@@ -1,7 +1,7 @@
 """
 Pydantic models for request/response validation
 """
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Dict, Optional, List
 from datetime import datetime
 
@@ -50,7 +50,8 @@ class Alert(BaseModel):
 class UserBase(BaseModel):
     """Base user schema"""
     username: str
-    email: EmailStr
+    # Accept email as a plain string (no external email validation required)
+    email: str
     full_name: Optional[str] = None
 
 

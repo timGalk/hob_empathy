@@ -1,5 +1,5 @@
-name: eeg_monitor
-description: EEG Dementia Monitoring - Mobile Edge Processor
+name: empathy_app
+description: Empathy App - EEG Dementia Monitoring
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -10,8 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
 
+
   # State management
   provider: ^6.1.1
+
+  url_launcher: ^6.1.10
 
   # Networking
   http: ^1.1.0
@@ -47,6 +50,20 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-Italic.ttf
+          style: italic
+
+
 
   # Add custom fonts if needed
   # fonts:

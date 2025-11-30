@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../theme/theme_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,12 +14,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
-  bool _isLoginMode = true; // Toggle between login and register
-
-  // Register fields
   final _emailController = TextEditingController();
   final _fullNameController = TextEditingController();
+  bool _isPasswordVisible = false;
+  bool _isLoginMode = true;
 
   @override
   void dispose() {
@@ -33,222 +32,247 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authService = context.read<AuthService>();
-
     bool success;
+
     if (_isLoginMode) {
       success = await authService.login(
         _usernameController.text.trim(),
-        _passwordController.text,
+        _passwordController.text.trim(),
       );
     } else {
       success = await authService.register(
         username: _usernameController.text.trim(),
         email: _emailController.text.trim(),
-        password: _passwordController.text,
+        password: _passwordController.text.trim(),
         fullName: _fullNameController.text.trim().isNotEmpty
             ? _fullNameController.text.trim()
             : null,
-        role: 'clinician',
+        role: "clinician",
       );
     }
 
-    if (success && mounted) {
-      // Navigation handled by main.dart based on auth state
+    if (mounted) {
+      if (success) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        final message = authService.error ?? 'Authentication failed';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final bool isDark = themeProvider.isDark;
+
+    // Increased contrast: slightly darker start, lighter end
+    final Color bgGradientStart = const Color.fromARGB(255, 110, 140, 200);
+    final Color bgGradientEnd = const Color.fromARGB(255, 180, 210, 255);
+    // Dark mode adjusted for clearer separation
+    final Color darkBgGradientStart = const Color.fromARGB(255, 40, 55, 95);
+    final Color darkBgGradientEnd = const Color.fromARGB(255, 18, 30, 60);
+
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Consumer<AuthService>(
-              builder: (context, authService, child) {
-                return Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // App Logo/Title
-                      Icon(
-                        Icons.monitor_heart,
-                        size: 80,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'EEG Monitor',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Dementia Monitoring System',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 48),
-
-                      // Username field
-                      TextFormField(
-                        controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: Icon(Icons.person),
-                          border: OutlineInputBorder(),
+      backgroundColor: isDark ? darkBgGradientStart : bgGradientStart,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark ? [darkBgGradientStart, darkBgGradientEnd] : [bgGradientStart, bgGradientEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Consumer<AuthService>(
+                builder: (context, authService, child) {
+                  return Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          _isLoginMode ? "Log In" : "Registration",
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Montserrat',
+                                color: const Color(0xFF325498),
+                              ),
+                          textAlign: TextAlign.center,
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your username';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Email field (register only)
-                      if (!_isLoginMode) ...[
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email),
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!value.contains('@')) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
+                        const SizedBox(height: 40),
+                        _field(
+                          controller: _usernameController,
+                          label: "Name*",
+                          validator: (v) => v == null || v.trim().isEmpty ? "Required field" : null,
                         ),
                         const SizedBox(height: 16),
-
-                        // Full name field (register only)
-                        TextFormField(
-                          controller: _fullNameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name (optional)',
-                            prefixIcon: Icon(Icons.badge),
-                            border: OutlineInputBorder(),
+                        if (!_isLoginMode) ...[
+                          _field(
+                            controller: _fullNameController,
+                            label: "Surname*",
+                            validator: (v) => v == null || v.trim().isEmpty ? "Required field" : null,
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Password field
-                      TextFormField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock),
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
+                          const SizedBox(height: 16),
+                          _field(
+                            controller: _emailController,
+                            label: "Email*",
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return "Required field";
+                              }
+                              if (!v.contains('@')) {
+                                return "Enter a valid email";
+                              }
+                              return null;
                             },
                           ),
-                        ),
-                        obscureText: !_isPasswordVisible,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          if (!_isLoginMode && value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Error message
-                      if (authService.error != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red[300]!),
+                          const SizedBox(height: 16),
+                        ],
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: !_isPasswordVisible,
+                          style: const TextStyle(
+                            fontFamily: 'Montserrat',
+                            color: Color(0xFF325498),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.error_outline, color: Colors.red[700]),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  authService.error!,
-                                  style: TextStyle(color: Colors.red[700]),
-                                ),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            labelText: "Password*",
+                            labelStyle: const TextStyle(
+                              fontFamily: 'Montserrat',
+                              color: Color(0xFF325498),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFA3B8E0)),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                                color: const Color(0xFF325498),
                               ),
-                            ],
+                              onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                            ),
                           ),
+                          validator: (v) => v == null || v.isEmpty ? "Required field" : null,
+                        ),
+                        if (!_isLoginMode) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            obscureText: true,
+                            style: const TextStyle(
+                              fontFamily: 'Montserrat',
+                              color: Color(0xFF325498),
+                            ),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              labelText: "Repeat password*",
+                              labelStyle: const TextStyle(
+                                fontFamily: 'Montserrat',
+                                color: Color(0xFF325498),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Color(0xFFA3B8E0)),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (!_isLoginMode && v != _passwordController.text) {
+                                return "Passwords do not match";
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        if (authService.error != null) ...[
+                          Text(
+                            authService.error!,
+                            style: const TextStyle(color: Colors.red, fontFamily: 'Montserrat'),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        ElevatedButton(
+                          onPressed: authService.isLoading ? null : _handleSubmit,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: const Size(double.infinity, 55),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            backgroundColor: const Color(0xFF325498),
+                          ),
+                          child: authService.isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text(
+                                  "Sign in",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontFamily: 'Montserrat',
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 16),
-                      ],
-
-                      // Submit button
-                      ElevatedButton(
-                        onPressed: authService.isLoading ? null : _handleSubmit,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isLoginMode = !_isLoginMode;
+                              authService.clearError();
+                            });
+                          },
+                          child: Text(
+                            _isLoginMode ? "Create an account" : "Back to login",
+                            style: const TextStyle(
+                              fontFamily: 'Montserrat',
+                              color: Color(0xFF325498),
+                            ),
                           ),
                         ),
-                        child: authService.isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(
-                                _isLoginMode ? 'Login' : 'Register',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Toggle between login and register
-                      TextButton(
-                        onPressed: authService.isLoading
-                            ? null
-                            : () {
-                                setState(() {
-                                  _isLoginMode = !_isLoginMode;
-                                  authService.clearError();
-                                });
-                              },
-                        child: Text(
-                          _isLoginMode
-                              ? "Don't have an account? Register"
-                              : 'Already have an account? Login',
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _field({
+    required TextEditingController controller,
+    required String label,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      style: const TextStyle(
+        fontFamily: 'Montserrat',
+        color: Color(0xFF325498),
+      ),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        labelText: label,
+        labelStyle: const TextStyle(
+          fontFamily: 'Montserrat',
+          color: Color(0xFF325498),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFA3B8E0)),
         ),
       ),
     );

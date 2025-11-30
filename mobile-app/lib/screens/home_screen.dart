@@ -10,6 +10,7 @@ import '../widgets/eeg_chart_widget.dart';
 import '../widgets/device_list.dart';
 import '../utils/config.dart';
 import '../models/eeg_data.dart';
+import '../theme/theme_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     processingService.featuresStream.listen((features) {
-      // Send to backend
       backendService.sendFeatures(
         FeaturePayload(
           patientId: Config.patientId,
@@ -46,31 +46,63 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     });
 
-    // Connect to WebSocket for real-time updates
     backendService.connectWebSocket();
   }
 
   @override
   Widget build(BuildContext context) {
+
+    final themeProvider = context.watch<ThemeProvider>();
+    final bool isDark = themeProvider.isDark;
+
+    // Increased contrast: slightly darker start, lighter end
+    final Color bgGradientStart = const Color.fromARGB(255, 110, 140, 200);
+    final Color bgGradientEnd = const Color.fromARGB(255, 180, 210, 255);
+
+    // Dark mode gradient colors (darker blueish)
+    // Dark mode adjusted for clearer separation
+    final Color darkBgGradientStart = const Color.fromARGB(255, 40, 55, 95);
+    final Color darkBgGradientEnd = const Color.fromARGB(255, 18, 30, 60);
+
     return Scaffold(
+      backgroundColor: isDark ? darkBgGradientStart : bgGradientStart,
       appBar: AppBar(
         title: Consumer<AuthService>(
           builder: (context, authService, child) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('EEG Monitor'),
+                const Text(
+                  'EmpathyApp',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 if (authService.currentUser != null)
                   Text(
                     authService.currentUser!.username,
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontSize: 12,
+                    ),
                   ),
               ],
             );
           },
         ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: const Color(0xFF325498), // тёмно-синяя панель
         actions: [
+          IconButton(
+            tooltip: 'Check Alert',
+            onPressed: () => Navigator.of(context).pushNamed('/alert_check'),
+            icon: const Icon(Icons.warning, color: Colors.white),
+          ),
+          IconButton(
+            tooltip: 'Health Alert',
+            onPressed: () => Navigator.of(context).pushNamed('/alert_health'),
+            icon: const Icon(Icons.help, color: Colors.white),
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'logout') {
@@ -84,7 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Icon(Icons.logout),
                     SizedBox(width: 8),
-                    Text('Logout'),
+                    Text(
+                      'Logout',
+                      style: TextStyle(fontFamily: 'Montserrat'),
+                    ),
                   ],
                 ),
               ),
@@ -92,10 +127,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Connection status banner
-          const ConnectionStatus(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [darkBgGradientStart, darkBgGradientEnd]
+                : [bgGradientStart, bgGradientEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          children: [
+            // Connection status banner
+            const ConnectionStatus(),
 
           // Risk indicator
           Padding(
@@ -125,15 +170,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Control buttons
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: _buildControlButtons(),
           ),
+
+          // Theme switcher button
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Consumer<ThemeProvider>(
+              builder: (context, theme, child) {
+                return ElevatedButton.icon(
+                  onPressed: () => theme.toggleTheme(),
+                  icon: Icon(
+                    theme.isDark ? Icons.dark_mode : Icons.light_mode,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    "Switch Theme",
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF325498),
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
+      ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showDeviceList,
         tooltip: 'Connect Device',
-        child: const Icon(Icons.bluetooth),
+        backgroundColor: const Color(0xFF325498),
+        child: const Icon(Icons.bluetooth, color: Colors.white),
       ),
     );
   }
@@ -148,17 +226,34 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: eegService.isConnected
                   ? () => eegService.disconnect()
                   : () => eegService.startSimulation(),
-              icon: Icon(eegService.isConnected ? Icons.stop : Icons.play_arrow),
-              label: Text(eegService.isConnected ? 'Stop' : 'Start Demo'),
+              icon: Icon(
+                eegService.isConnected ? Icons.stop : Icons.play_arrow,
+                color: Colors.white,
+              ),
+              label: Text(
+                eegService.isConnected ? 'Stop' : 'Start Demo',
+                style: const TextStyle(
+                  fontFamily: 'Montserrat',
+                  color: Colors.white,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: eegService.isConnected ? Colors.red : Colors.green,
-                foregroundColor: Colors.white,
               ),
             ),
             ElevatedButton.icon(
               onPressed: () => _refreshPatientState(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: const Text(
+                'Refresh',
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF325498),
+              ),
             ),
           ],
         );
@@ -183,13 +278,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final backendService = context.read<BackendService>();
     final eegService = context.read<EEGService>();
 
-    // Disconnect all services
     backendService.disconnectWebSocket();
     if (eegService.isConnected) {
       eegService.disconnect();
     }
 
-    // Logout
     await authService.logout();
   }
 
